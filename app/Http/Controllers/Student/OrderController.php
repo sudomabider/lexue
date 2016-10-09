@@ -27,21 +27,42 @@ class OrderController extends Controller
      */
     public function index()
     {
-        $raw = $this->student->lectures();
-        $lecturesDesc = $raw->orderByLatest()->get();
-        $lecturesAsc = $raw->orderByEarliest()->get();
+        $lectures = $this->student->lectures()->orderByLatest()->get();
 
-        $upcoming = $lecturesAsc->filter(function($lecture) {
-            return $lecture->start_time >= Carbon::now();
+        $upcoming = $ongoing = $finished = collect();
+        
+        foreach ($lectures as $lecture) {
+            if ($lecture->start_time->isFuture()) {
+                // asc order
+                $upcoming->push($lecture);
+            } 
+            
+            elseif ($lecture->end_time->isPast()) {
+                $finished->prepend($lecture);
+            } 
+            
+            else {
+                $ongoing->prepend($lecture);
+            }
+        }
+        
+        /* alternatively and less efficiently
+        ** Collection::filter() walks over entire collection 3 times
+        
+        $allLectures = $this->student->lectures()->orderByLatest()->get();
+        
+        $upcoming = $allLectures->reverse()->filter(function($lecture) {
+            return $lecture->start_time->isFuture();
         });
 
-        $ongoing = $lecturesDesc->filter(function($lecture) {
-            return ($lecture->start_time < Carbon::now() && $lecture->end_time >= Carbon::now());
+        $ongoing = $allLectures->filter(function($lecture) {
+            return $lecture->start_time->isPast() && $lecture->end_time->isFuture();
         });
 
-        $finished = $lecturesDesc->filter(function($lecture) {
-            return $lecture->end_time < Carbon::now();
+        $finished = $allLectures->filter(function($lecture) {
+            return $lecture->end_time->isPast();
         });
+        */
 
         return $this->frontView('wechat.orders.index', compact('upcoming', 'ongoing', 'finished'));
     }
