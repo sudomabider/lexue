@@ -59,7 +59,7 @@ class OrderController extends Controller
     {
         $order = Order::find($id);
 
-        if($order->is_lecture == 1) {
+        if($order->is_lecture) {
             $tradeInfo = array(
                 'trade_type'       => 'JSAPI',
                 'body'             => '乐学云直播课 '.$order->lecture()->name,
@@ -94,10 +94,10 @@ class OrderController extends Controller
         $response = app('wechat')->payment->handleNotify(function($notify, $successful) {
             $order = Order::where('trade_no', $notify->out_trade_no)->first();
 
-            if($order === null)
+            if(!$order)
                 return 'Order does not exist.';
 
-            if($order->paid == 1)
+            if($order->paid)
                 return true;
 
             if($successful) {
